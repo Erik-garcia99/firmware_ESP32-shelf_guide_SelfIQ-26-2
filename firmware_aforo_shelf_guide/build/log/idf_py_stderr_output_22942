@@ -1,0 +1,5 @@
+Command: cmake -G Ninja -B /home/dmrx/Documents/proyecto_carrera/firmware_ESP32-shelf_guide_SelfIQ-26-2/firmware_aforo_shelf_guide/build -DPYTHON_DEPS_CHECKED=1 -DPYTHON=/home/dmrx/.espressif/python_env/idf6.0_py3.14_env/bin/python -DESP_PLATFORM=1 -DCCACHE_ENABLE=False /home/dmrx/Documents/proyecto_carrera/firmware_ESP32-shelf_guide_SelfIQ-26-2/firmware_aforo_shelf_guide
+fatal: detected dubious ownership in repository at '/opt/esp-idf'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /opt/esp-idf
