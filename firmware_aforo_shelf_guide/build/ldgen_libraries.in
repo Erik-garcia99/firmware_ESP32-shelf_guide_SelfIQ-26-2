@@ -40,10 +40,13 @@ $<TARGET_FILE:__idf_lwip>
 $<TARGET_FILE:mbedtls>
 $<TARGET_FILE:mbedx509>
 $<TARGET_FILE:tfpsacrypto>
+$<TARGET_FILE:builtin>
+$<TARGET_FILE:idf::esp_security>
+$<TARGET_FILE:everest>
+$<TARGET_FILE:p256m>
 $<TARGET_FILE:__idf_nvs_flash>
 $<TARGET_FILE:__idf_nvs_sec_provider>
 $<TARGET_FILE:idf::mbedtls>
-$<TARGET_FILE:idf::esp_security>
 $<TARGET_FILE:__idf_esp_hal_wdt>
 $<TARGET_FILE:__idf_esp_hal_ana_conv>
 $<TARGET_FILE:__idf_esp_hal_i2s>
@@ -128,7 +131,6 @@ $<TARGET_FILE:idf::esp_coex>
 $<TARGET_FILE:idf::esp_wifi>
 $<TARGET_FILE:idf::esp_driver_spi>
 $<TARGET_FILE:idf::esp_gdbstub>
-$<TARGET_FILE:__idf_esp_driver_spi>
 $<TARGET_FILE:idf::unity>
 $<TARGET_FILE:idf::cmock>
 $<TARGET_FILE:__idf_unity>
@@ -167,6 +169,7 @@ $<TARGET_FILE:idf::esp_driver_sdm>
 $<TARGET_FILE:idf::esp_driver_sdmmc>
 $<TARGET_FILE:__idf_esp_driver_sd_intf>
 $<TARGET_FILE:idf::esp_driver_sdspi>
+$<TARGET_FILE:__idf_esp_driver_spi>
 $<TARGET_FILE:idf::esp_driver_touch_sens>
 $<TARGET_FILE:idf::esp_driver_twai>
 $<TARGET_FILE:idf::esp_eth>

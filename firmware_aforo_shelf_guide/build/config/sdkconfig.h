@@ -1,6 +1,6 @@
 /*
  * Automatically generated file. DO NOT EDIT.
- * Espressif IoT Development Framework (ESP-IDF) 6.0.2 Configuration Header
+ * Espressif IoT Development Framework (ESP-IDF) 6.0.1 Configuration Header
  */
 #pragma once
 #define CONFIG_SOC_CAPS_ECO_VER_MAX 301
@@ -378,7 +378,6 @@
 #define CONFIG_ESP_PHY_CALIBRATION_MODE 0
 #define CONFIG_ESP_PHY_PLL_TRACK_PERIOD_MS 1000
 #define CONFIG_ESP_PHY_IRAM_OPT 1
-#define CONFIG_ESP_PHY_ENABLE_VERSION_PRINT 1
 #define CONFIG_ESP_ROM_PRINT_IN_IRAM 1
 #define CONFIG_ESP_CONSOLE_UART_DEFAULT 1
 #define CONFIG_ESP_CONSOLE_UART 1
@@ -660,6 +659,7 @@
 #define CONFIG_MBEDTLS_GCM_C 1
 #define CONFIG_MBEDTLS_AES_ROM_TABLES 1
 #define CONFIG_MBEDTLS_CMAC_C 1
+#define CONFIG_MBEDTLS_BIGNUM_C 1
 #define CONFIG_MBEDTLS_RSA_C 1
 #define CONFIG_MBEDTLS_ECP_C 1
 #define CONFIG_MBEDTLS_ECP_DP_SECP256R1_ENABLED 1

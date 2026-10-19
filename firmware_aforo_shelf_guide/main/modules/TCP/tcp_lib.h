@@ -23,8 +23,7 @@
 #define RETRY_SERVER BIT4
 #define TCP_DISCONNECTED BIT5 // servidor cerro la conexion inesperadamente
 #define UPDATE_TCP BIT6
-#define TPC_FAIL BIT7
-#define TCP_DISCONNECTED BIT8
+#define TCP_FAIL BIT7
 // #define EXT_TCP_MEM BIT7
 // #define FAIL_TCP_MEM BIT8
 // #define BREAK_UPDATE_WIFI BIT7
@@ -104,5 +103,9 @@ esp_err_t send_message();
  * llego
  */
 void recv_task(void *params);
+
+
+
+
 
 #endif

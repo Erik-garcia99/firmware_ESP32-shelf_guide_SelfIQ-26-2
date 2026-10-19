@@ -15,7 +15,7 @@
 #include <esp_event.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
-
+#include <esp_netif_ip_addr.h>
 //++++++++++++++++++++++ macros
 // intentara conectarse con las credenicales actuales 5 veces, esperara 1
 // minutos antes de volver a petdir de nuevo las credenciales.

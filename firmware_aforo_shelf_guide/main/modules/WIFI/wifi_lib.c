@@ -21,6 +21,10 @@
 #include <esp_netif.h>
 #include <esp_wifi.h>
 #include <nvs_flash.h>
+#include<lwip/err.h>
+#include<lwip/sys.h>
+
+
 
 /* librerias propias*/
 #include "esp_wifi_types_generic.h"

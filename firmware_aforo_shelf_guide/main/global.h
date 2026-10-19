@@ -58,7 +58,7 @@ extern ACTION_T eAction;
 
 typedef enum {
   eNoType = 0x00,
-  eWifiDefault,
+  eWifi,
   eBroker,
   eRespACK,
   eRespNACK,
