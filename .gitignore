@@ -1,4 +1,13 @@
 #archivos build
 firmware_aforo_shelf_guide/build/
+firmware_aforo_shelf_guide/main/build/
 firmware_aforo_shelf_guide/.vscode
 firmware_aforo_shelf_guide/.cache
+
+
+# Python
+__pycache__/
+*.pyc
+
+# Archivos temporales
+*.log
