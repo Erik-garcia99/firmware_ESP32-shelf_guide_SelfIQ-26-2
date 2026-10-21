@@ -1,4 +1,4 @@
-/* * Data converted from /home/dmrx/Documents/proyecto_selftiq26-2/firmware_ESP32-shelf_guide_SelfIQ-26-2/firmware_aforo_shelf_guide/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from /home/dmrx/Documents/proyecto_carrera/firmware_ESP32-shelf_guide_SelfIQ-26-2/firmware_aforo_shelf_guide/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

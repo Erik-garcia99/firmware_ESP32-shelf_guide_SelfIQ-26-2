@@ -1,1 +1,4 @@
-firmware_aforo_shelf_guide/build/*
+#archivos build
+firmware_aforo_shelf_guide/build/
+firmware_aforo_shelf_guide/.vscode
+firmware_aforo_shelf_guide/.cache

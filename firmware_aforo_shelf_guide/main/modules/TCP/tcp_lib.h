@@ -20,10 +20,12 @@
 
 //+++++++++++++++ bits de grupo de eventos
 
-#define RETRY_SERVER BIT4
+#define TCP_RETRY_SERVER BIT4
 #define TCP_DISCONNECTED BIT5 // servidor cerro la conexion inesperadamente
-#define UPDATE_TCP BIT6
+#define TCP_UPDATE BIT6
 #define TCP_FAIL BIT7
+#define TCP_CONNECTED BIT8
+#define TCP_WIFI_UPDATE BIT9
 // #define EXT_TCP_MEM BIT7
 // #define FAIL_TCP_MEM BIT8
 // #define BREAK_UPDATE_WIFI BIT7
@@ -93,7 +95,7 @@ esp_err_t tcp_cliente_init();
  *
  *
  */
-esp_err_t send_message();
+esp_err_t send_message(void);
 
 // +++++++++++++++++ tareas
 /**
@@ -103,9 +105,5 @@ esp_err_t send_message();
  * llego
  */
 void recv_task(void *params);
-
-
-
-
 
 #endif

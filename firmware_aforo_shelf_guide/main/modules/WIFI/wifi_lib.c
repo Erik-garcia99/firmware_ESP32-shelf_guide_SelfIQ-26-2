@@ -20,11 +20,9 @@
 #include <esp_log.h>
 #include <esp_netif.h>
 #include <esp_wifi.h>
+#include <lwip/err.h>
+#include <lwip/sys.h>
 #include <nvs_flash.h>
-#include<lwip/err.h>
-#include<lwip/sys.h>
-
-
 
 /* librerias propias*/
 #include "esp_wifi_types_generic.h"
@@ -71,7 +69,7 @@ static void wifi_event_handler(void *args, esp_event_base_t event_base,
     xEventGroupSetBits(g_wifi_event_group, WIFI_CONNECTED_BIT);
   }
 }
-
+/*
 void wifi_init_sta(void) {
   if (s_initialized) {
     return;
@@ -98,6 +96,33 @@ void wifi_init_sta(void) {
   ESP_ERROR_CHECK(esp_wifi_start());
 
   s_initialized = TRUE;
+}*/
+
+void wifi_init_sta(void) {
+  if (s_initialized)
+    return;
+
+  g_wifi_event_group = xEventGroupCreate();
+
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_netif_create_default_wifi_sta();
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+  /* RAM: la fuente de verdad es nuestra NVS custom con checksum */
+  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(
+      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
+  ESP_ERROR_CHECK(esp_event_handler_instance_register(
+      IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_start());
+
+  s_initialized = TRUE;
 }
 
 // intenta conectar con lo guardado en flash y activa uno de los 3 bits:
@@ -105,7 +130,7 @@ void wifi_init_sta(void) {
 //  WIFI_FAIL_BIT     -> hay credenciales pero no conecto (async, por el
 //  handler) WIFI_CONNECTED_BIT-> hay credenciales y conecto (async, por el
 //  handler)
-void wifi_connect_saved(void) {
+/*void wifi_connect_saved(void) {
   xEventGroupClearBits(g_wifi_event_group,
                        WIFI_CONNECTED_BIT | WIFI_FAIL_BIT | WIFI_NO_CREDS_BIT);
   s_retry_num = 0;
@@ -121,6 +146,35 @@ void wifi_connect_saved(void) {
 
   ESP_LOGI(TAG, "conectando a '%s' con credenciales guardadas", saved.sta.ssid);
   esp_wifi_disconnect(); // limpia intento previo (el handler lo ignora)
+  ESP_ERROR_CHECK(esp_wifi_connect());
+}*/
+
+void wifi_connect_saved(void) {
+  xEventGroupClearBits(g_wifi_event_group,
+                       WIFI_CONNECTED_BIT | WIFI_FAIL_BIT | WIFI_NO_CREDS_BIT);
+  s_retry_num = 0;
+  esp_wifi.connected = 0;
+
+  if (load_cred(eWIFI_CRED) != ESP_OK) {
+    ESP_LOGW(TAG, "sin credenciales validas en NVS custom");
+    xEventGroupSetBits(g_wifi_event_group, WIFI_NO_CREDS_BIT);
+    return;
+  }
+
+  wifi_config_t cfg = {0};
+  cfg.sta.threshold.authmode =
+      (strlen(esp_wifi.pswd) == 0) ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK;
+  strncpy((char *)cfg.sta.ssid, esp_wifi.ssid, sizeof(cfg.sta.ssid) - 1);
+  strncpy((char *)cfg.sta.password, esp_wifi.pswd,
+          sizeof(cfg.sta.password) - 1);
+
+  if (esp_wifi_set_config(WIFI_IF_STA, &cfg) != ESP_OK) {
+    xEventGroupSetBits(g_wifi_event_group, WIFI_NO_CREDS_BIT);
+    return;
+  }
+
+  ESP_LOGI(TAG, "conectando a '%s'", esp_wifi.ssid);
+  esp_wifi_disconnect();
   ESP_ERROR_CHECK(esp_wifi_connect());
 }
 
@@ -166,7 +220,7 @@ static void wifi_free_credentials(void) {
 
 // provisioning: recibe credenciales nuevas, las guarda en flash e intenta
 // conectar
-esp_err_t wifi_set_credentials(const char *ssid, const char *pswd) {
+/*esp_err_t wifi_set_credentials(const char *ssid, const char *pswd) {
   esp_err_t err = wifi_store_credentials(ssid, pswd);
   if (err != ESP_OK) {
     return err;
@@ -191,4 +245,29 @@ esp_err_t wifi_set_credentials(const char *ssid, const char *pswd) {
 
   wifi_connect_saved(); // reinicia el flujo de los 3 bits
   return ESP_OK;
+}*/
+
+esp_err_t wifi_set_credentials(const char *ssid, const char *pswd) {
+  esp_err_t err = wifi_store_credentials(ssid, pswd);
+  if (err != ESP_OK)
+    return err;
+
+  wifi_config_t cfg = {0};
+  cfg.sta.threshold.authmode =
+      (strlen(esp_wifi.pswd) == 0) ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA2_PSK;
+  strncpy((char *)cfg.sta.ssid, esp_wifi.ssid, sizeof(cfg.sta.ssid) - 1);
+  strncpy((char *)cfg.sta.password, esp_wifi.pswd,
+          sizeof(cfg.sta.password) - 1);
+
+  err = esp_wifi_set_config(WIFI_IF_STA, &cfg);
+  memset(&cfg, 0, sizeof(cfg));
+  if (err != ESP_OK)
+    return err;
+
+  s_retry_num = 0;
+  esp_wifi.connected = 0;
+  xEventGroupClearBits(g_wifi_event_group,
+                       WIFI_CONNECTED_BIT | WIFI_FAIL_BIT | WIFI_NO_CREDS_BIT);
+  esp_wifi_disconnect();
+  return esp_wifi_connect();
 }

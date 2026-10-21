@@ -13,9 +13,9 @@
 
 #include <esp_err.h>
 #include <esp_event.h>
+#include <esp_netif_ip_addr.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
-#include <esp_netif_ip_addr.h>
 //++++++++++++++++++++++ macros
 // intentara conectarse con las credenicales actuales 5 veces, esperara 1
 // minutos antes de volver a petdir de nuevo las credenciales.
@@ -26,6 +26,19 @@
 #define WIFI_FAIL_BIT BIT1
 #define WIFI_NO_CREDS_BIT BIT2
 #define WIFI_UPDATE BIT3
+
+// credenciales de WIFI por defecto de la rasberry pi
+#define SSID_RPI "SelfIQ-Admi"
+#define PSWD_RPI "$elfIQ-4dmi-1"
+
+// tiempos del mecanismo de recuperacion
+#define WIFI_RECOVER_MS 60000 // espera entre reintentos al perder la red
+#define WIFI_RECOVER_TRIES 5  // reintentos antes de borrar credenciales
+#define WIFI_CONNECT_TIMEOUT_MS                                                \
+  60000                    // espera maxima al conectar a la red nueva
+#define TCP_RETRY_MS 60000 // espera antes de repetir el flujo con la RPI
+#define TCP_UPDATE_TIMEOUT_MS                                                  \
+  300000 // espera maxima de las credenciales de la RPI
 
 //++++++++++++++++ grupos de eventos
 extern EventGroupHandle_t g_wifi_event_group;

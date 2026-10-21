@@ -1,6 +1,6 @@
 /*
  * Automatically generated file. DO NOT EDIT.
- * Espressif IoT Development Framework (ESP-IDF) 6.0.1 Configuration Header
+ * Espressif IoT Development Framework (ESP-IDF) 6.0.2 Configuration Header
  */
 #pragma once
 #define CONFIG_SOC_CAPS_ECO_VER_MAX 301

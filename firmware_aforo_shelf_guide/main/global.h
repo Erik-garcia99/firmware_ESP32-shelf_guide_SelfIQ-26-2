@@ -12,6 +12,7 @@
 #define GLOBAL_H
 
 // macros
+#include <esp_err.h>
 #include <stdint.h>
 #define TRUE 1
 #define FALSE 0
@@ -26,6 +27,8 @@
 // namespace propio en NVS donde guardamos nuestros datos y sus checksums
 #define NVS_NS "selfiq_cfg"
 #define KEY_WIFI_SUM "wifi_sum" // checksum de SSID + pswd
+#define KEY_WIFI_SSID "wifi_ssid"
+#define KEY_WIFI_PSWD "wifi_pswd"
 #define KEY_TCP_IP "tcp_ip"
 #define KEY_TCP_PORT "tcp_port"
 #define KEY_TCP_SUM "tcp_sum" // checksum de IP + PORT
@@ -44,7 +47,7 @@ extern TYPE_OP_TYPE_T eOp_type;
 
 // esta informacion va en el frame.
 //  accion que queremos haacer entre la ESP32 y la RPI, por el momento solo se
-//  tiene para hacer login
+//  tiene para hacer logi= 0x0Fn
 typedef enum {
   action_none = 0x00,
   eReqWifi, // soliciar credeniclaes WIFI a la RPI.
@@ -60,8 +63,7 @@ typedef enum {
   eNoType = 0x00,
   eWifi,
   eBroker,
-  eRespACK,
-  eRespNACK,
+  eRespACK = 0x0F,
 } TYPE_FRAME_T;
 extern TYPE_FRAME_T eType_frame;
 
@@ -133,5 +135,11 @@ extern TYPE_SEND_INFO_T send_info;
 // funcion global
 //  calve - valor - SSID - PWSD / IP-PORT
 uint64_t checksum(const char *key, const void *anchor, uint8_t identificator);
+
+// funciones que usare para guardar crecnuales en flash, (WIFI lo hace cons us
+// propias funciones)
+esp_err_t save_credentials(uint8_t identifier);
+esp_err_t load_cred(uint8_t identifier);
+esp_err_t erease_cred_nvs(uint8_t identifier);
 
 #endif
