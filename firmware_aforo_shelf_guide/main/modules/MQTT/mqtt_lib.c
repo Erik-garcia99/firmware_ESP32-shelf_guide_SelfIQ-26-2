@@ -13,8 +13,8 @@
 #include "modules/MQTT/mqtt_lib.h"
 #include "modules/WIFI/wifi_lib.h"
 
-#define NODE_TYPE "access_counter" // Tipo del nodo en el backend
-#define NODE_MODULE "capacity_atmosphere" // Firmware actual: shelf guide
+#define NODE_TYPE "guide" // Tipo del nodo en el backend
+#define NODE_MODULE "led" // Firmware actual: shelf guide
 #define MQTT_SETUP_TOPIC "selfiq/esp32_setup"
 #define IDENTITY_NS "selfiq_node"
 
