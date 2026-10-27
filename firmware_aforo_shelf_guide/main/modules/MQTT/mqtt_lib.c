@@ -48,32 +48,6 @@ static struct {
 } s_pending[PENDING_COUNT];
 
 
-#define PENDING_COUNT 16
-#define EVENT_BYTES 384
-static SemaphoreHandle_t s_client_lock, s_pending_lock;
-static bool s_running;
-static char s_uri[MQTT_URI_SIZE];
-static char s_ack_topic[MQTT_ACK_TOPIC_SIZE];
-static uint32_t s_boot[MQTT_BOOT_WORDS], s_sequence;
-static struct {
-  char id[MQTT_EVENT_ID_SIZE];
-  char payload[EVENT_BYTES];
-} s_pending[PENDING_COUNT];
-
-
-#define PENDING_COUNT 16
-#define EVENT_BYTES 384
-static SemaphoreHandle_t s_client_lock, s_pending_lock;
-static bool s_running;
-static char s_uri[MQTT_URI_SIZE];
-static char s_ack_topic[MQTT_ACK_TOPIC_SIZE];
-static uint32_t s_boot[MQTT_BOOT_WORDS], s_sequence;
-static struct {
-  char id[MQTT_EVENT_ID_SIZE];
-  char payload[EVENT_BYTES];
-} s_pending[PENDING_COUNT];
-
-// estos valores, del cslo el if de donde se los saca?, 36 es un valor constante o pudiera cambiar, si este puede cambiar mejor usar macros o varibales. si no usar staticos entonces 
 static bool uuid_valid(const char *v) {
   if (strlen(v) != UUID_TEXT_LEN)
     return false;
