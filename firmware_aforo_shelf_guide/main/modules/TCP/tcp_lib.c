@@ -35,6 +35,7 @@
 
 //+++++++++++++++++++++ varibales globales
 
+
 const char *TAG = "TCP_CLIENT : ";
 
 // funciones
