@@ -14,7 +14,7 @@
 #define MAC_TEXT_SIZE (MAC_TEXT_LEN + TEXT_TERMINATOR_SIZE)
 
 
-#define NODE_TYPE "shelf_guide" // Tipo del nodo en el backend
+#define NODE_TYPE "guide" // Tipo del nodo en el backend
 #define NODE_MODULE "shelf_monitor" // Firmware actual: shelf guide
 #define MQTT_SETUP_TOPIC "selfiq/esp32_setup"
 #define IDENTITY_NS "selfiq_node"
