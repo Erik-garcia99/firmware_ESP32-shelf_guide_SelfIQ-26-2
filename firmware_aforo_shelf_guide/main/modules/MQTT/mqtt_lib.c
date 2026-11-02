@@ -29,6 +29,9 @@ static char s_client_id[MQTT_CLIENT_ID_SIZE] = {0}; // esp- + 12 caracteres hex
 static char s_reply_topic[MQTT_REPLY_TOPIC_SIZE] = {0};
 static char s_esp_id[UUID_TEXT_SIZE] = {0};
 static char s_branch_id[UUID_TEXT_SIZE] = {0};
+/* Receipt topic survives reset/reboot so a lost confirmation can be retried.
+ * It is not an active identity and is removed on the next successful alta. */
+static char s_reset_topic[MAX_TOPIC_LEN] = {0};
 static volatile bool s_registered = false;
 static bool s_reply_ready = false;
 static int s_reply_sub_id = -1;
@@ -71,9 +74,18 @@ static esp_err_t save_node_identity(void) {
     err = nvs_set_str(h, "node_id", s_esp_id);
   if (err == ESP_OK)
     err = nvs_set_str(h, "branch_id", s_branch_id);
+  if (err == ESP_OK) {
+    esp_err_t erased = nvs_erase_key(h, "reset_topic");
+    if (erased != ESP_OK && erased != ESP_ERR_NVS_NOT_FOUND)
+      err = erased;
+  }
   if (err == ESP_OK)
     err = nvs_commit(h);
   nvs_close(h);
+  if (err == ESP_OK && s_reset_topic[0]) {
+    esp_mqtt_client_unsubscribe(s_client, s_reset_topic);
+    s_reset_topic[0] = 0;
+  }
   return err;
 }
 
@@ -83,6 +95,14 @@ static void load_node_identity(void) {
     return;
   }
   char mac[MAC_TEXT_SIZE] = {0};
+  size_t reset_len = sizeof(s_reset_topic);
+  if (nvs_get_str(h, "reset_topic", s_reset_topic, &reset_len) == ESP_OK && s_reset_topic[0]) {
+    /* A power cut during reset must never restore the previous identity. */
+    s_registered = false;
+    nvs_close(h);
+    return;
+  }
+  s_reset_topic[0] = 0;
   size_t ml = sizeof(mac), el = sizeof(s_esp_id), bl = sizeof(s_branch_id);
   esp_err_t err = nvs_get_str(h, "mac", mac, &ml);
   if (err == ESP_OK)
@@ -123,8 +143,54 @@ static void send_status_and_subscribe(void) {
   snprintf(topic, sizeof(topic), "selfiq/%s/%s/%s/command", s_branch_id,
            s_esp_id, NODE_MODULE);
   esp_mqtt_client_subscribe(s_client, topic, 1);
+  snprintf(topic, sizeof(topic), "selfiq/%s/%s/control/command", s_branch_id, s_esp_id);
+  esp_mqtt_client_subscribe(s_client, topic, 1);
   ESP_LOGI(TAG, "ESP32 registrada: MAC=%s ID=%s SUCURSAL=%s", s_mac, s_esp_id,
            s_branch_id);
+}
+
+static void reset_identity(esp_mqtt_event_handle_t event) {
+  if (event->retain || event->current_data_offset != 0 ||
+      event->data_len != event->total_data_len || event->data_len != MQTT_CONTROL_REQUEST_BYTES)
+    return;
+  char topic[MAX_TOPIC_LEN];
+  if (s_registered)
+    snprintf(topic, sizeof(topic), "selfiq/%s/%s/control/command", s_branch_id, s_esp_id);
+  else
+    snprintf(topic, sizeof(topic), "%s", s_reset_topic);
+  if (!topic[0] || event->topic_len != (int)strlen(topic) ||
+      memcmp(event->topic, topic, event->topic_len))
+    return;
+  const uint8_t *wire = (const uint8_t *)event->data;
+  if (wire[0] != MQTT_REQ_ERASE_NVS || wire[1] != MQTT_NVS_IDENTITY)
+    return;
+  nvs_handle_t h;
+  esp_err_t err = nvs_open(IDENTITY_NS, NVS_READWRITE, &h);
+  if (err == ESP_OK) {
+    /* Persist the retry marker BEFORE erasing identity keys. */
+    err = nvs_set_str(h, "reset_topic", topic);
+    if (err == ESP_OK) err = nvs_commit(h);
+    if (err == ESP_OK) {
+      s_registered = false;
+      snprintf(s_reset_topic, sizeof(s_reset_topic), "%s", topic);
+      const char *keys[] = {"mac", "node_id", "branch_id"};
+      for (int i = 0; i < 3 && err == ESP_OK; ++i) {
+        err = nvs_erase_key(h, keys[i]);
+        if (err == ESP_ERR_NVS_NOT_FOUND) err = ESP_OK;
+      }
+      if (err == ESP_OK) err = nvs_commit(h);
+      xSemaphoreTake(s_pending_lock, portMAX_DELAY);
+      memset(s_pending, 0, sizeof(s_pending));
+      xSemaphoreGive(s_pending_lock);
+    }
+    nvs_close(h);
+  }
+  char result_topic[MAX_TOPIC_LEN];
+  uint8_t payload[MQTT_CONTROL_RESULT_BYTES] = {
+      MQTT_RESP_ERASE_NVS, MQTT_NVS_IDENTITY, err == ESP_OK ? 0U : 1U};
+  snprintf(result_topic, sizeof(result_topic), "%.*sresult", (int)strlen(topic) - 7, topic);
+  esp_mqtt_client_publish(s_client, result_topic, (const char *)payload, sizeof(payload), 1, 0);
+  ESP_LOGI(TAG, "Restablecimiento de identidad: %s; Wi-Fi y firmware conservados", esp_err_to_name(err));
 }
 
 static void mqtt_event(void *args, esp_event_base_t base, int32_t event_id,
@@ -136,6 +202,8 @@ static void mqtt_event(void *args, esp_event_base_t base, int32_t event_id,
     /* Identidad persistida: no depender del backend para volver a operar. */
     if (s_registered)
       send_status_and_subscribe();
+    else if (s_reset_topic[0])
+      esp_mqtt_client_subscribe(s_client, s_reset_topic, 1);
     s_reply_ready = false;
     s_reply_sub_id = esp_mqtt_client_subscribe(s_client, s_reply_topic, 1);
     ESP_LOGI(TAG,
@@ -156,6 +224,7 @@ static void mqtt_event(void *args, esp_event_base_t base, int32_t event_id,
     ESP_LOGW(TAG, "MQTT desconectado; el cliente reintentará automáticamente");
     break;
   case MQTT_EVENT_DATA: {
+    reset_identity(event);
     if (event->topic_len == (int)strlen(s_ack_topic) && s_ack_topic[0] &&
         !memcmp(event->topic, s_ack_topic, event->topic_len)) {
       if (event->current_data_offset == 0 &&
@@ -197,6 +266,12 @@ static void mqtt_event(void *args, esp_event_base_t base, int32_t event_id,
       branch_id[UUID_TEXT_LEN] = '\0';
       if (!uuid_valid(esp_id) || !uuid_valid(branch_id)) {
         ESP_LOGE(TAG, "Respuesta con IDs inválidos");
+        break;
+      }
+      char old_topic[MAX_TOPIC_LEN];
+      snprintf(old_topic, sizeof(old_topic), "selfiq/%s/%s/control/command", branch_id, esp_id);
+      if (s_reset_topic[0] && !strcmp(old_topic, s_reset_topic)) {
+        ESP_LOGI(TAG, "Esperando eliminación del registro anterior antes de aceptar otra identidad");
         break;
       }
       memcpy(s_esp_id, esp_id, sizeof(s_esp_id));
@@ -306,6 +381,9 @@ static void registration_retry(void *param) {
         else
           send_registration();
       } else {
+        snprintf(topic, sizeof(topic), "selfiq/%s/%s/%s/status", s_branch_id,
+                 s_esp_id, NODE_MODULE);
+        esp_mqtt_client_publish(s_client, topic, "online", 6, 1, 0);
         snprintf(topic, sizeof(topic), "selfiq/%s/%s/%s/telemetry", s_branch_id,
                  s_esp_id, NODE_MODULE);
         for (int i = 0; i < PENDING_COUNT; ++i) {

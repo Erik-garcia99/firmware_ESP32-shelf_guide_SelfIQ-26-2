@@ -6,6 +6,16 @@
 
 #define MAX_TOPIC_LEN 180
 
+/* Payload MQTT: comando(1), destino NVS(1). Respuesta: comando(1), destino(1), resultado(1).
+ * Wi-Fi/TCP reservados: este firmware solo admite borrar la identidad backend. */
+#define MQTT_REQ_ERASE_NVS 0x01U
+#define MQTT_RESP_ERASE_NVS 0x81U
+#define MQTT_NVS_WIFI 0x01U
+#define MQTT_NVS_TCP 0x02U
+#define MQTT_NVS_IDENTITY 0x03U
+#define MQTT_CONTROL_REQUEST_BYTES 2U
+#define MQTT_CONTROL_RESULT_BYTES 3U
+
 #define MDNS_QUERY_TIMEOUT_MS 2000U
 #define MQTT_DEFAULT_PORT 1883U
 
@@ -14,7 +24,7 @@
 #define MAC_TEXT_SIZE (MAC_TEXT_LEN + TEXT_TERMINATOR_SIZE)
 
 
-#define NODE_TYPE "shelf_guide" // Tipo del nodo en el backend
+#define NODE_TYPE "guide" // Tipo del nodo en el backend
 #define NODE_MODULE "shelf_monitor" // Firmware actual: shelf guide
 #define MQTT_SETUP_TOPIC "selfiq/esp32_setup"
 #define IDENTITY_NS "selfiq_node"
