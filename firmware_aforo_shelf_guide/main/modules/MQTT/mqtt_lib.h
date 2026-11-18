@@ -60,4 +60,9 @@ bool mqtt_network_connected(void);
  * Used by each sensor module, e.g. mqtt_queue_value("temperature", 23.5).
  * No UTC clock is invented: gateway attaches received_at. */
 esp_err_t mqtt_queue_value(const char *event_type, double value);
+
+/* Publica un JSON de guía en .../<módulo>/command/ack (QoS 1, sin retain).
+ * El resultado de guía no se reencola: si no hay red, se pierde hasta la
+ * consulta de estado; el apagado por TTL ocurre igual. */
+esp_err_t mqtt_publish_command_ack(const char *json, int len);
 #endif

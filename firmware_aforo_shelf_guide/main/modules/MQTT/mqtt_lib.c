@@ -18,6 +18,7 @@
 #include "nvs.h"
 
 #include<global.h>
+#include "modules/GUIDE/guide_control.h"
 #include "modules/MQTT/mqtt_lib.h"
 #include "modules/WIFI/wifi_lib.h"
 
@@ -27,6 +28,7 @@ static esp_mqtt_client_handle_t s_client = NULL;
 static char s_mac[MAC_TEXT_SIZE] = {0};
 static char s_client_id[MQTT_CLIENT_ID_SIZE] = {0}; // esp- + 12 caracteres hex
 static char s_reply_topic[MQTT_REPLY_TOPIC_SIZE] = {0};
+static char s_command_topic[MAX_TOPIC_LEN] = {0};
 static char s_esp_id[UUID_TEXT_SIZE] = {0};
 static char s_branch_id[UUID_TEXT_SIZE] = {0};
 /* Receipt topic survives reset/reboot so a lost confirmation can be retried.
@@ -140,11 +142,14 @@ static void send_status_and_subscribe(void) {
   snprintf(topic, sizeof(topic), "selfiq/%s/%s/%s/status", s_branch_id,
            s_esp_id, NODE_MODULE);
   esp_mqtt_client_publish(s_client, topic, "online", 6, 1, 0);
-  snprintf(topic, sizeof(topic), "selfiq/%s/%s/%s/command", s_branch_id,
-           s_esp_id, NODE_MODULE);
-  esp_mqtt_client_subscribe(s_client, topic, 1);
+  snprintf(s_command_topic, sizeof(s_command_topic), "selfiq/%s/%s/%s/command",
+           s_branch_id, s_esp_id, NODE_MODULE);
+  esp_mqtt_client_subscribe(s_client, s_command_topic, 1);
   snprintf(topic, sizeof(topic), "selfiq/%s/%s/control/command", s_branch_id, s_esp_id);
   esp_mqtt_client_subscribe(s_client, topic, 1);
+  /* Cada conexión vuelve a declarar capacidad y driver; el gateway no debe
+   * suponer canales de una sesión anterior. */
+  guide_control_publish_capabilities();
   ESP_LOGI(TAG, "ESP32 registrada: MAC=%s ID=%s SUCURSAL=%s", s_mac, s_esp_id,
            s_branch_id);
 }
@@ -182,6 +187,11 @@ static void reset_identity(esp_mqtt_event_handle_t event) {
       xSemaphoreTake(s_pending_lock, portMAX_DELAY);
       memset(s_pending, 0, sizeof(s_pending));
       xSemaphoreGive(s_pending_lock);
+      if (err == ESP_OK) {
+        /* Ninguna orden de la identidad anterior puede operar el nodo nuevo. */
+        guide_control_identity_reset();
+        s_command_topic[0] = 0;
+      }
     }
     nvs_close(h);
   }
@@ -243,6 +253,16 @@ static void mqtt_event(void *args, esp_event_base_t base, int32_t event_id,
       }
       break;
     }
+    if (s_command_topic[0] &&
+        event->topic_len == (int)strlen(s_command_topic) &&
+        !memcmp(event->topic, s_command_topic, event->topic_len)) {
+      /* Toda la validación (versión, boot, canal, TTL) vive en guide_control:
+       * aquí solo se entrega el payload tal cual llegó. */
+      guide_control_handle_payload(event->data, event->data_len,
+                                   event->total_data_len,
+                                   event->current_data_offset, event->retain);
+      break;
+    }
     if (event->topic_len == (int)strlen(s_reply_topic) &&
         memcmp(event->topic, s_reply_topic, event->topic_len) == 0) {
 
@@ -281,10 +301,10 @@ static void mqtt_event(void *args, esp_event_base_t base, int32_t event_id,
         break;
       }
       s_registered = true;
+      guide_control_identity_reset();
       send_status_and_subscribe();
     } else if (event->topic_len > 0) {
-      ESP_LOGI(TAG,
-               "Mensaje en tópico del sistema (comando; ejecución pendiente)");
+      ESP_LOGW(TAG, "Mensaje en tópico no reconocido; descartado");
     }
     break;
   }
@@ -402,6 +422,28 @@ static void registration_retry(void *param) {
 }
 
 bool mqtt_network_connected(void) { return s_mqtt_connected; }
+
+esp_err_t mqtt_publish_command_ack(const char *json, int len) {
+  char topic[MQTT_ACK_TOPIC_SIZE];
+  int written;
+  int msg_id;
+
+  if (!json || len <= 0)
+    return ESP_ERR_INVALID_ARG;
+  if (!s_client || !s_running || !s_mqtt_connected || !s_registered)
+    return ESP_ERR_INVALID_STATE;
+  written = snprintf(topic, sizeof(topic), "selfiq/%s/%s/%s/command/ack",
+                     s_branch_id, s_esp_id, NODE_MODULE);
+  if (written < 0 || written >= (int)sizeof(topic))
+    return ESP_ERR_INVALID_SIZE;
+  /* QoS 1 y sin retain: el resultado no se reproduce al reconectar. */
+  msg_id = esp_mqtt_client_publish(s_client, topic, json, len, 1, 0);
+  if (msg_id < 0) {
+    ESP_LOGW(TAG, "Resultado de guía no aceptado por el cliente MQTT");
+    return ESP_ERR_INVALID_STATE;
+  }
+  return ESP_OK;
+}
 
 void mqtt_network_stop(void) {
   if (!s_client_lock)
