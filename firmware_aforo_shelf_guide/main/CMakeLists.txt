@@ -4,12 +4,19 @@ idf_component_register(
         "modules/WIFI/wifi_lib.c"
         "modules/TCP/tcp_lib.c"
         "modules/MQTT/mqtt_lib.c"
+        "modules/GUIDE/guide_protocol.c"
+        "modules/GUIDE/guide_parse.c"
+        "modules/GUIDE/guide_core.c"
+        "modules/GUIDE/guide_control.c"
+        "modules/GUIDE/guide_driver_direct.c"
+        "modules/GUIDE/guide_driver_hc595.c"
 
     INCLUDE_DIRS
         "."
         "modules/WIFI"
         "modules/TCP"
         "modules/MQTT"
+        "modules/GUIDE"
 
     REQUIRES
         mdns
@@ -19,4 +26,5 @@ idf_component_register(
         nvs_flash
         lwip
         espressif__mqtt
+        esp_driver_gpio
 )

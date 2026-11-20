@@ -28,6 +28,7 @@
 #include "modules/WIFI/wifi_lib.h"
 #include "modules/TCP/tcp_lib.h"
 #include "modules/MQTT/mqtt_lib.h"
+#include "modules/GUIDE/guide_control.h"
 
 /* Globals kept for the existing TCP library; recovery exchanges below have a
  * private socket and never run recv_task concurrently on that socket. */
@@ -154,6 +155,12 @@ void app_main(void) {
     ESP_LOGE(TAG, "[INTEGRITY] NVS_INIT_FAILED %s; requiere reparacion, no se borra", esp_err_to_name(err));
     return;
   }
+  /* Las salidas de guía quedan apagadas antes de Wi-Fi/MQTT. Si el driver o el
+   * temporizador fallan, el módulo se declara sin canales y rechaza guías. */
+  err = guide_control_init();
+  if (err != ESP_OK)
+    ESP_LOGE(TAG, "[GUIDE] inicializacion incompleta: %s", esp_err_to_name(err));
+  guide_control_set_publisher(mqtt_publish_command_ack);
   wifi_init_sta();
   bool on_ap = false;
   unsigned rounds = 0;
