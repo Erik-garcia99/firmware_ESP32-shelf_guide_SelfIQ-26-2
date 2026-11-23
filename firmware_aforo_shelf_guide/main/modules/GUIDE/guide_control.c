@@ -30,6 +30,11 @@ static const guide_driver_t *const s_driver = &guide_driver_direct;
 
 static const char *TAG = "guide_control";
 
+/* La prueba de luz se sintetiza aquí mismo: no hay tránsito MQTT, así que la
+ * ventana de aceptación solo debe cubrir el trabajo local (id/sesión, log UART
+ * y semáforos). El TTL pedido se conserva exacto: end_ms = now + duration_ms. */
+#define GUIDE_TEST_ACCEPT_MS 50U
+
 static guide_core_t s_core;
 static SemaphoreHandle_t s_lock;
 static esp_timer_handle_t s_timer;
@@ -209,10 +214,11 @@ static void run_light_test(const guide_light_test_t *test) {
   cmd.action = GUIDE_ACTION_START;
   cmd.version = GUIDE_PROTOCOL_VERSION;
   cmd.channel = (int)test->channel;
-  /* `accept_ms` es el fin de la ventana de aceptación: se acepta en el acto
-   * (+1 ms) y el TTL de la prueba cuenta desde ahí. */
-  cmd.accept_ms = now + 1U;
-  cmd.end_ms = cmd.accept_ms + test->duration_ms;
+  /* `accept_ms` es el fin de la ventana de aceptación. Antes se ponía a
+   * `now + 1U` y guide_core lo rechazaba como `stale`: entre formar el id,
+   * imprimir el log y tomar el semáforo ya pasaba más de 1 ms. */
+  cmd.accept_ms = now + GUIDE_TEST_ACCEPT_MS;
+  cmd.end_ms = now + test->duration_ms;
   cmd.has_accept = true;
   cmd.has_end = true;
   cmd.has_boot = true;
